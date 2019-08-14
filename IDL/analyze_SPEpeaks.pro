@@ -1,4 +1,5 @@
 pro analyze_SPEpeaks, filename_input
+filename_input=['20190804-2_1_ACES6.7_dT36_0.4ScRad51_10min_snap3']
 loadct, 5
 
 gaussian_peaks = fltarr(2,2,7,7)
@@ -118,7 +119,8 @@ close, 1
 close, 2
 
 ;count_good_peak = count_good_peak
-openw, 1, filename_input + ".traces"
+;openw, 1, filename_input + ".traces"
+openw, 1,  "hel1.traces"
 writeu, 1, film_length
 writeu, 1, count_good_peak         ;寫入有多少個trace被記錄。在matlab裡的變數是"Ntraces"
 writeu, 1, time_tr

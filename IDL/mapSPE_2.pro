@@ -14,53 +14,54 @@ frame=intarr(film_width,film_height)
 average_frame=fltarr(film_width,film_height)
 window, 0, xsize=512, ysize=512
 ;for j=1,10 do begin
-for j=1,400 do begin
+total_frame_num = 500
+for j=1,total_frame_num do begin
   readu,1,frame
-  showframe=BYTSCL(frame,MAX=3000,MIN=600)
+  showframe=BYTSCL(frame,MAX = mean(frame)+3*stddev(frame),MIN = mean(frame)-2*stddev(frame))
   ;frame=showframe
   tv, showframe
   print, "Reading frame: ", j
-  wait, 0.1
+  ;wait, 0.1
   average_frame=average_frame + frame
 endfor
-  average_frame = average_frame/10
-  ;average_frame=BYTSCL(average_frame,MAX=3000,MIN=500)
-  average_frame=BYTSCL(average_frame)
-  frame=average_frame
-  tvscl,frame
-  close, 1
-  
- 
+average_frame = average_frame/total_frame_num
+;average_frame=BYTSCL(average_frame,MAX=3000,MIN=500)
+average_frame=BYTSCL(average_frame,MAX = mean(average_frame)+6*stddev(average_frame),MIN = mean(average_frame))
+frame=average_frame
+tvscl,frame
+close, 1
+
+
 med=float(median(frame))
 
-  
 
-  
 
-  for i = 0, 511 do begin
-    for j = 0, 511 do begin
-      if frame(i,j) lt byte(med + 20) then frame(i,j) = 0
-    endfor
+
+
+for i = 0, 511 do begin
+  for j = 0, 511 do begin
+    if frame(i,j) lt byte(med + 20) then frame(i,j) = 0
   endfor
-  for i = 1, 510 do begin
-    for j = 1, 510 do begin
-      if frame(i,j) gt 0 then begin
-        neighbor_count=fix(0)
-        for u = -1, 1 do begin
-          for v = -1, 1 do begin
-            if (u eq 0) and (v eq 0) then continue
-            if frame(i+u, j+v) gt 0 then neighbor_count=neighbor_count+1
-          endfor
+endfor
+for i = 1, 510 do begin
+  for j = 1, 510 do begin
+    if frame(i,j) gt 0 then begin
+      neighbor_count=fix(0)
+      for u = -1, 1 do begin
+        for v = -1, 1 do begin
+          if (u eq 0) and (v eq 0) then continue
+          if frame(i+u, j+v) gt 0 then neighbor_count=neighbor_count+1
         endfor
-        
-        if neighbor_count lt 2 then frame(i,j) = 0
-        
-      endif
-    endfor
+      endfor
+
+      if neighbor_count lt 2 then frame(i,j) = 0
+
+    endif
   endfor
-  ;frame=BYTSCL(frame,MAX=3000,MIN=600)
-  wset, 0
-  tv,frame
+endfor
+;frame=BYTSCL(frame,MAX=3000,MIN=600)
+wset, 0
+tv,frame
 WRITE_TIFF, dir + "rough_average.tif", frame, 1, RED = R_ORIG, GREEN = G_ORIG, BLUE = B_ORIG
 circle = bytarr(11,11)
 circle(*,0) = [ 0,0,0,0,1,1,1,0,0,0,0]
@@ -114,19 +115,19 @@ for j = 0, 2 do begin ;找3個點
   y_left(j) = y
   x_right(j) = x_left(j) + 262
   y_right(j) = y_left(j) + 0
-  
+
   print, "選點盡量形成一大三角形，以涵蓋畫面大部分區塊。若以下按鍵沒反應，請先確定游標已回到主控台閃爍"
   print, "use keyboard to tweak, <s> to stop"
   print, "for left image, use <r>(up), <f>(down), <g>(right), <d>(left)
   print, "for right image, use <i>(up), <k>(down), <l>(right), <j>(left)
-  
+
   ; 把control_key歸零
   control_key = 'z'
   while control_key ne 's' do begin
-  
+
     ; temp_frame需要歸零
     temp_frame = frame
-    
+
     ; show spots the user picked (畫圈圈)
     for k = -5, 5 do begin
       for l = -5, 5 do begin
@@ -136,7 +137,7 @@ for j = 0, 2 do begin ;找3個點
         endif
       endfor
     endfor
-    
+
     ; 每次找完點須重新畫分隔線
     for i = 0, (film_width-1) do begin
       temp_frame((film_width/2-1),i) = 240 ;255->intensity最強，白色
@@ -144,14 +145,14 @@ for j = 0, 2 do begin ;找3個點
     endfor
     wset, 0
     tv, temp_frame
-    
+
     control_key = get_kbrd(1)
     case control_key of
       'r' : y_left(j) = y_left(j)+1
       'f' : y_left(j) = y_left(j)-1
       'g' : x_left(j) = x_left(j)+1
       'd' : x_left(j) = x_left(j)-1
-      
+
       'i' : y_right(j) = y_right(j)+1
       'k' : y_right(j) = y_right(j)-1
       'l' : x_right(j) = x_right(j)+1
@@ -229,24 +230,24 @@ for i = round(0.02*film_width), round(0.98*film_width) do begin
   if i eq (round(0.48*film_width)) then i = round(0.52*film_width)  ; skip region where channels overlap
   for j = round(0.02*film_width), round(0.98*film_width) do begin
     if temp2(i,j) gt 0 then begin
-    
+
       ; find the nearest maxima
-      
+
       foob = temp2(i-3:i+3,j-3:j+3)
       max_value = max(foob, max_location)
       y = max_location / 7 - 3       ;peak中心點
       x = max_location mod 7 - 3     ;peak中心點
       ;if j eq 11 then  print, "foo", max_value, foob, x, y
-      
+
       ; only analyze peaks in current column,
       ; and not near edge of area analyzed
-      
+
       if x gt -1 and x lt 1 then begin
         if y gt -1 and y lt 1 then begin
           y = y + j
           x = x + i
-          
-          
+
+
           ; check if its a good peak
           ; i.e. surrounding points below 1 stdev
           quality = 1
@@ -258,11 +259,11 @@ for i = round(0.02*film_width), round(0.98*film_width) do begin
               endif
             endfor
           endfor
-          
+
           if quality eq 1 then begin
-          
+
             ; draw where peak was found on screen
-            
+
             for k = -5, 5 do begin
               for l = -5, 5 do begin
                 if circle(k+5,l+5) gt 0 then begin
@@ -272,7 +273,7 @@ for i = round(0.02*film_width), round(0.98*film_width) do begin
             endfor
             wset, 0
             tv, temp4
-            
+
             good_peak(0,count_good_peak) = x
             good_peak(1,count_good_peak) = y
             count_good_peak = count_good_peak + 1
@@ -280,16 +281,16 @@ for i = round(0.02*film_width), round(0.98*film_width) do begin
           endif
         endif
       endif
-      
+
       ; for debugging
-      
+
       ;if count_good_peak gt 10 then begin
       ; i = 514
       ; j = 514
       ;endif
-      
+
     endif
-    
+
   endfor
 endfor
 print, "there were ", count_good_peak, " good peaks"
@@ -317,7 +318,7 @@ trans_x=trans_x_coeff
 trans_y=trans_y_coeff
 for i = 0, count_good_peak - 1 do begin
   if good_peak(0,i) lt (film_width/2) then begin   ; 只找左半邊
-  
+
     ; calculate location of pair
     ; 將左半邊good peak的座標乘上transpose matrix得到右半邊座標, mapped(xf,yf)
     xf = round(trans_x(0) + trans_x(1)*float(good_peak(0,i)) + trans_x(2)*float(good_peak(1,i))) ; xf = ax + bx * xi + cx * yi
@@ -325,11 +326,11 @@ for i = 0, count_good_peak - 1 do begin
     for j = i + 1, count_good_peak - 1 do begin         ; 暴力去找每一個找過的peak
       if abs(good_peak(0,j) - xf) lt 3 then begin   ; x, y的誤差在正負3之內都算有pair到
         if abs(good_peak(1,j) - yf) lt 3 then begin
-        
+
           ; temp4 = temp3
-          
+
           ; circle the two peaks
-          
+
           for k = -5, 5 do begin
             for l = -5, 5 do begin
               if circle(k+5,l+5) gt 0 then begin
@@ -340,13 +341,13 @@ for i = 0, count_good_peak - 1 do begin
           endfor
           wset, 0
           tv, temp4
-          
+
           x_left(count_pairs) = good_peak(0,i)
           y_left(count_pairs) = good_peak(1,i)
           x_right(count_pairs) = good_peak(0,j) - (film_width/2) ;先將右半邊點座標平移至左邊，供後面POLYWARP進行變形疊圖
           y_right(count_pairs) = good_peak(1,j)
           count_pairs = count_pairs + 1
-          
+
         endif
       endif
     endfor
@@ -356,12 +357,34 @@ endfor
 if count_pairs gt 16 then begin ;POLYWARP需要16組點，以解出16組coefficients
 
   print, "found ", count_pairs, " pairs"
-  
+
+
+  ;把資訊存到一個 (count_pairs,4)矩陣裡
+  location = intarr(count_pairs,4)
+  location(*,0) = x_right(0:count_pairs -1)
+  location(*,1) = y_right(0:count_pairs -1)
+  location(*,2) = x_left(0:count_pairs -1)
+  location(*,3) = y_left(0:count_pairs -1)
+
+  print,'x_right =', x_right(0:count_pairs -1)
+  print,'y_right =', y_right(0:count_pairs -1)
+
+
+  openw, 1, dir + "location.dat"
+
+  for i = 0, 4*count_pairs -1 do begin
+    printf, 1, location(i)
+  endfor
+  close, 1
+
+  ;print, "x_right= ", x_right
+  ;print, "y_right= ", y_right
+
   POLYWARP, x_right, y_right, x_left, y_left, 3, P, Q
   ; P, Q為利用POLYWARP所得之transpose matrix (coefficient)，皆為3x3矩陣
-  
+
   openw, 1, dir + "rough.map"
-  
+
   for i = 0, 15 do begin
     printf, 1, P(i)
   endfor
@@ -369,7 +392,7 @@ if count_pairs gt 16 then begin ;POLYWARP需要16組點，以解出16組coeffici
     printf, 1, Q(i)
   endfor
   close, 1
-  
+
   print, "P= ", P
   print, "Q= ", Q
   print, "New 3rd-order polynomial coefficients are saved"

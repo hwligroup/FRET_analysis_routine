@@ -1,6 +1,6 @@
-pro find_SPEpeaks, filename_input
+pro find_SPEpeaks_2, filename_input
 ; load color table
-filename_input=['20190122_4_dT18_ScRad51_ATP_10min_7']
+filename_input=['20190804-2_1_ACES6.7_dT36_0.4ScRad51_10min_snap3']
 loadct, 5
 
 COMMON colors, R_ORIG, G_ORIG, B_ORIG, R_CURR, G_CURR, B_CURR
@@ -62,7 +62,6 @@ number_of_frames  = fix(1)
 
 close, 1          ; make sure unit 1 is closed
 
-
 openr, 1, filename_input + ".spe"
 
 ; figure out size + allocate appropriately
@@ -77,7 +76,7 @@ frame=intarr(film_width,film_height)
 ave_arr = fltarr(film_width,film_height)
 ;=================================================================
 ; 只取前10個frame 可以自行調整
-if number_of_frames gt 10 then number_of_frames = 10
+if number_of_frames gt 200 then number_of_frames = 10
 ;=================================================================
     for j = 0, number_of_frames - 1 do begin
        ;if((j mod 5) eq 0) then print, j, number_of_frames
@@ -118,15 +117,42 @@ endfor
 bkg = rebin(bkg,film_width,film_height)
 bkg = smooth(bkg,20,/EDGE_TRUNCATE)
 
+med = float(median(frame))
+med_left = float(median(frame(0:255,*)))
+med_right = float(median(frame(256:511,*)))
 
+; 把 frame 存成 csv 檔案
+;WRITE_CSV,filename_input + "_frame.csv",frame
+;WRITE_CSV,filename_input + "_frame_Left.csv",frame(0:255,*)
+;WRITE_CSV,filename_input + "_frame_Right.csv",frame(256:511,*)
 
-med=float(median(frame))
+back_criteria_left = float(STDDEV(frame(0:255,*)))
+back_criteria_right = float(STDDEV(frame(256:511,*)))
 
-for i = 0, 511 do begin
+;WRITE_CSV,filename_input + "_frame_criteria_Left.csv",back_criteria_left
+;WRITE_CSV,filename_input + "_frame_criteria_Right.csv",back_criteria_right
+
+; 左右背景強度不同，設定不同criteria，0:255 是 left， 256:511 是 right (HLY)
+for i = 0, 255 do begin
   for j = 0, 511 do begin
-    if frame(i,j) lt byte(med + 25) then frame(i,j) = 0 
+    ;if frame(i,j) lt byte(med + 25) then frame(i,j) = 0
+    if frame(i,j) lt byte( med_left + 2*back_criteria_left ) then frame(i,j) = 0
   endfor
 endfor
+
+for i = 256, 511 do begin
+  for j = 0, 511 do begin
+    ;if frame(i,j) lt byte(med + 25) then frame(i,j) = 0
+    if frame(i,j) lt byte( med_right + 2*back_criteria_right  ) then frame(i,j) = 0
+  endfor
+endfor
+
+
+;for i = 0, 511 do begin
+;  for j = 0, 511 do begin
+;    if frame(i,j) lt byte(med + 25) then frame(i,j) = 0 
+;  endfor
+;endfor
 
 ;--------despeckle----------------------
 for i = 1, 510 do begin
@@ -179,7 +205,7 @@ max_location = float(1)
 
 ; 開啟polynomial mapping檔
 ;print, ""
-openr, 1, "D:\Ping-Yu\Fluorescence\FRET\20190122\rough.map" ;
+openr, 1, "D:\Ping-Yu\Fluorescence\FRET\20190804_2\rough.map" ;
 
 readf, 1, P
 readf, 1, Q
@@ -236,7 +262,7 @@ count_good_peak = 0
 ; temp4 左右兩邊疊起來的圖
 
 
-for i = (ceil(0.03*film_width)), (floor(0.40*film_width)) do begin
+for i = (ceil(0.03*film_width)), (floor(0.45*film_width)) do begin
   for j = (round(0.03*film_height)), (round(0.97*film_height)) do begin
     if temp2(i,j) gt 0 then begin   ; thresholding後有訊號的點才找
       
