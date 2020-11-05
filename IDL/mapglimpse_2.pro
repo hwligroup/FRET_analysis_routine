@@ -17,7 +17,7 @@ COMMON colors, R_ORIG, G_ORIG, B_ORIG, R_CURR, G_CURR, B_CURR
 
 close, 1          ; make sure unit 1 is closed
 cd, CURRENT=current_dir
-dir=current_dir
+dir=current_dir+'\'
 
 ; Read header.mat file using HDF5 functions
 ; The file needs to be v7.3 mat file
