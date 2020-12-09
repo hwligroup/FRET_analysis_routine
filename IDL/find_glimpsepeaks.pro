@@ -102,24 +102,6 @@ pro find_glimpsepeaks, filename_input
   H5F_CLOSE, file_id
 
 
-  FOR i=0,nframes-1 DO BEGIN
-    gfilename = STRING(filenumber[i], FORMAT='(I1)') + '.glimpse'
-    gfile_path = FILEPATH(gfilename, ROOT_DIR=current_dir)
-    ;PRINT, gfile_path
-    ;PRINT, gfilename
-
-    image = READ_BINARY(gfile_path, DATA_TYPE=2, DATA_START=offset[i], DATA_DIMS=[width, height], ENDIAN='big')  ; Data type == 12: UINT (16 bit)
-    ; Note that the LabVIEW array is row based, and IDL array is column based, so the array is transposed
-    ; compared to the original recording
-    image = UINT(LONG(image))
-    ;+ 32768
-    ; In order to use LabVIEW's imaq image, the u16 image array was casted to i16, by
-    ; casting to i32 first and then subtracting 2^15 then cast to i16
-    ; The previous line is the reverse of the process
-    ;TV, image  ; But somehow the TV displays the image correctly
-  ENDFOR
-  PRINT, SIZE(image)
-  ;PRINT, image[0, *]
 
   ;;;;;;end
   ;;;;close, 1  ; make sure unit 1 is closed
@@ -147,6 +129,8 @@ pro find_glimpsepeaks, filename_input
   PRINT, NFRAMES
   ;=================================================================
   for j = 0, nframes - 1 do begin
+    gfilename = STRING(filenumber[i], FORMAT='(I1)') + '.glimpse'
+    gfile_path = FILEPATH(gfilename, ROOT_DIR=current_dir)
     ;if((j mod 5) eq 0) then print, j, nframes
     ;;;;readu, 1, frame
     image = READ_BINARY(gfile_path, DATA_TYPE=2, DATA_START=offset[j], DATA_DIMS=[width, height], ENDIAN='big')  ; Data type == 12: UINT (16 bit)
